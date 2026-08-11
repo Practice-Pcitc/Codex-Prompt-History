@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+node_modules/
+viewer/dist/
+viewer/.vite/
+viewer/.npm-cache-standalone/
+data/*.db
+data/*.db-*
+logs/
+.env
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
