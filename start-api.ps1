@@ -3,7 +3,7 @@ $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Uvicorn = Join-Path $Root ".venv\Scripts\uvicorn.exe"
 
 if (-not (Test-Path -LiteralPath $Uvicorn)) {
-    throw "请先按照 README.md 创建 .venv 并安装 Python 依赖。"
+    throw "Create .venv and install Python dependencies first. See README.md."
 }
 
 Set-Location $Root
