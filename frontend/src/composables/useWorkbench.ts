@@ -89,6 +89,9 @@ export function useWorkbench() {
   async function load() {
     const request = ++generation;
     busy.value = true;
+    rows.value = [];
+    total.value = 0;
+    error.value = "";
     try {
       const params = {
         page: page.value,

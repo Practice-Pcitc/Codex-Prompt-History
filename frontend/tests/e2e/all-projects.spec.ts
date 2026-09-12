@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 test("automatically lists projects and keeps conversations separate", async ({ page }) => {
+  let releaseRecords!: () => void;
+  const recordsReady = new Promise<void>((resolve) => {
+    releaseRecords = resolve;
+  });
   const projects = ["Alpha", "Beta"].map((name) => ({
     name,
     path: `D:\\${name}`,
@@ -36,6 +40,7 @@ test("automatically lists projects and keeps conversations separate", async ({ p
       );
       data = { items, pagination: { total: items.length } };
     } else {
+      await recordsReady;
       expect(url.searchParams.get("session_id")).toBe("Alpha-2");
       expect(project).toBe("D:\\Alpha");
       expect(url.searchParams.get("hide_brief")).toBe("false");
@@ -59,7 +64,12 @@ test("automatically lists projects and keeps conversations separate", async ({ p
   await page.locator(".project-item").filter({ hasText: "Alpha" }).click();
   await expect(page.getByRole("button", { name: "Alpha 对话 1", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Alpha 对话 2", exact: true }).click();
-  await expect(page.locator(".conversation-prompt")).toHaveText("继续");
+  await expect(page.getByRole("status")).toHaveText("正在加载对话…");
+  await expect(page.locator(".conversation-prompt")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Alpha 对话 1", exact: true })).toHaveCount(0);
+  releaseRecords();
+  await expect(page.getByRole("status")).toHaveCount(0);
+  await expect(page.locator(".conversation-prompt")).toHaveText(["继续"]);
   await expect(page.getByRole("heading", { name: "Alpha", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "← 返回本项目对话列表" }).click();
   await expect(page.getByRole("button", { name: "Alpha 对话 1", exact: true })).toBeVisible();

@@ -192,7 +192,8 @@ const states: Record<string, string> = {
             ><span>你的提问，按发送顺序 · 包含补充和简短回复</span>
           </div>
           <div v-loading="busy" class="entries">
-            <div v-if="!rows.length && !error" class="empty">
+            <p v-if="busy" role="status">{{ session ? "正在加载对话…" : "正在加载记录…" }}</p>
+            <div v-if="!busy && !rows.length && !error" class="empty">
               <div class="empty-symbol">≡</div>
               <h3>
                 {{
