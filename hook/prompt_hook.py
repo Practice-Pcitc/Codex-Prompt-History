@@ -4,12 +4,16 @@ import json
 import os
 import sys
 from datetime import UTC, datetime
+from pathlib import Path
 from uuid import uuid4
+
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 
 from config import HookConfig
 from git_metadata import read_git_metadata
 from logger import build_logger
-from models import PromptRecord, SessionRecord, ToolEventRecord
+from models import GitMetadata, ProjectMatch, PromptRecord, SessionRecord, ToolEventRecord
 from project_resolver import resolve_project
 from redaction import redact_prompt
 from storage import PromptStorage
@@ -54,7 +58,7 @@ def _session_record(
     *,
     config: HookConfig,
     created_at: str,
-) -> tuple[SessionRecord | None, object, object]:
+) -> tuple[SessionRecord | None, GitMetadata, ProjectMatch]:
     cwd = _optional_text(payload, "cwd", "working_directory") or os.getcwd()
     git = read_git_metadata(cwd)
     project = resolve_project(
@@ -88,20 +92,29 @@ def handle(payload: dict[str, object], config: HookConfig) -> str | None:
     if not config.enabled or event_name not in SUPPORTED_EVENTS:
         return None
 
+    storage = PromptStorage(config.database_path, timeout_seconds=config.sqlite_timeout_seconds)
+    with storage.transaction():
+        if storage.uses_local_collector():
+            return None
+        return _handle_event(payload, config, storage)
+
+
+def _handle_event(
+    payload: dict[str, object], config: HookConfig, storage: PromptStorage
+) -> str | None:
+    event_name = _optional_text(payload, "hook_event_name")
     created_at = datetime.now(UTC).isoformat()
     session, git, project = _session_record(
         payload,
         config=config,
         created_at=created_at,
     )
-    cwd = session.working_directory if session else (
-        _optional_text(payload, "cwd", "working_directory") or os.getcwd()
+    cwd = (
+        session.working_directory
+        if session
+        else (_optional_text(payload, "cwd", "working_directory") or os.getcwd())
     )
     session_id = session.session_id if session else None
-    storage = PromptStorage(
-        config.database_path,
-        timeout_seconds=config.sqlite_timeout_seconds,
-    )
     if session:
         storage.start_session(session)
 

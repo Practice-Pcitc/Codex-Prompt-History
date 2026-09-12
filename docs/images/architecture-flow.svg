@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="410" viewBox="0 0 1100 410" role="img" aria-labelledby="title description">
+<title id="title">Codex Prompt History 实现流程</title>
+<desc id="description">本机 Codex 会话文件，识别用户提问，范围过滤、字段脱敏与去重，保存至 SQLite，经 FastAPI 查询接口，按项目、对话、提示词展示，并支持收藏副本与模板。</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#64748b"/></marker></defs>
+<rect width="1100" height="410" rx="16" fill="#f8fafc"/>
+<g fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)">
+<path d="M260 122 H287"/><path d="M530 122 H557"/><path d="M800 122 H827"/>
+<path d="M955 174 V247"/><path d="M840 312 H678"/><path d="M435 312 H273"/>
+</g>
+<g font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif">
+<g transform="translate(30 70)"><rect width="230" height="104" rx="12" fill="#ffffff" stroke="#cbd5e1"/><text x="16" y="25" font-size="13" fill="#7c3aed">01</text><text x="115" y="53" text-anchor="middle" font-size="18" font-weight="600" fill="#0f172a">本机 Codex 会话文件</text><text x="115" y="80" text-anchor="middle" font-size="14" fill="#475569">读取本地历史记录</text></g>
+<g transform="translate(300 70)"><rect width="230" height="104" rx="12" fill="#ffffff" stroke="#cbd5e1"/><text x="16" y="25" font-size="13" fill="#7c3aed">02</text><text x="115" y="53" text-anchor="middle" font-size="18" font-weight="600" fill="#0f172a">识别用户提问</text><text x="115" y="80" text-anchor="middle" font-size="14" fill="#475569">排除内部任务与环境说明</text></g>
+<g transform="translate(570 70)"><rect width="230" height="104" rx="12" fill="#ffffff" stroke="#cbd5e1"/><text x="16" y="25" font-size="13" fill="#7c3aed">03</text><text x="115" y="53" text-anchor="middle" font-size="18" font-weight="600" fill="#0f172a">过滤、脱敏与去重</text><text x="115" y="80" text-anchor="middle" font-size="14" fill="#475569">按采集设置处理</text></g>
+<g transform="translate(840 70)"><rect width="230" height="104" rx="12" fill="#ffffff" stroke="#cbd5e1"/><text x="16" y="25" font-size="13" fill="#7c3aed">04</text><text x="115" y="53" text-anchor="middle" font-size="18" font-weight="600" fill="#0f172a">SQLite</text><text x="115" y="80" text-anchor="middle" font-size="14" fill="#475569">保存提问与采集状态</text></g>
+<g transform="translate(840 260)"><rect width="230" height="104" rx="12" fill="#ffffff" stroke="#cbd5e1"/><text x="16" y="25" font-size="13" fill="#7c3aed">05</text><text x="115" y="53" text-anchor="middle" font-size="18" font-weight="600" fill="#0f172a">FastAPI 查询接口</text><text x="115" y="80" text-anchor="middle" font-size="14" fill="#475569">提供记录查询</text></g>
+<g transform="translate(435 260)"><rect width="230" height="104" rx="12" fill="#ffffff" stroke="#cbd5e1"/><text x="16" y="25" font-size="13" fill="#7c3aed">06</text><text x="115" y="53" text-anchor="middle" font-size="18" font-weight="600" fill="#0f172a">项目 → 对话 → 提示词</text><text x="115" y="80" text-anchor="middle" font-size="14" fill="#475569">按发送顺序回看</text></g>
+<g transform="translate(30 260)"><rect width="230" height="104" rx="12" fill="#ffffff" stroke="#cbd5e1"/><text x="16" y="25" font-size="13" fill="#7c3aed">07</text><text x="115" y="53" text-anchor="middle" font-size="18" font-weight="600" fill="#0f172a">收藏副本与模板</text><text x="115" y="80" text-anchor="middle" font-size="14" fill="#475569">编辑、复制与复用</text></g>
+</g>
+</svg>

@@ -2,55 +2,56 @@ param(
     [string]$PythonPath = "",
     [string]$CodexHomePath = "$env:USERPROFILE\.codex"
 )
-
 $ErrorActionPreference = "Stop"
-$HookRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$HookRoot = $PSScriptRoot
 $ProjectRoot = Split-Path -Parent $HookRoot
 $HookScript = Join-Path $HookRoot "prompt_hook.py"
 $WindowsLauncher = Join-Path $HookRoot "run_prompt_hook.cmd"
-
 if (-not $PythonPath) {
-    $Candidate = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
-    if (Test-Path -LiteralPath $Candidate) {
-        $PythonPath = $Candidate
-    } else {
+    $PythonPath = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+    if (-not (Test-Path -LiteralPath $PythonPath)) {
         $PythonPath = (Get-Command python -ErrorAction Stop).Source
     }
 }
-
+$PythonPath = (Resolve-Path -LiteralPath $PythonPath).Path
 $HooksPath = Join-Path $CodexHomePath "hooks.json"
-New-Item -ItemType Directory -Force -Path $CodexHomePath | Out-Null
-
 $Handler = [ordered]@{
     type = "command"
-    command = "python `"$HookScript`""
-    commandWindows = "cmd.exe /d /s /c $WindowsLauncher"
+    command = "`"$PythonPath`" `"$HookScript`""
+    commandWindows = "cmd.exe /d /s /c `"`"$WindowsLauncher`" `"$PythonPath`"`""
     timeout = 3
 }
-$Group = [ordered]@{ hooks = @($Handler) }
-
+$BackupPath = $null
 if (Test-Path -LiteralPath $HooksPath) {
-    Copy-Item -LiteralPath $HooksPath -Destination "$HooksPath.bak" -Force
-    $ExistingJson = [System.IO.File]::ReadAllText($HooksPath, [System.Text.Encoding]::UTF8)
-    $Document = $ExistingJson | ConvertFrom-Json
+    $Document = [System.IO.File]::ReadAllText($HooksPath) | ConvertFrom-Json
+    $BackupPath = "$HooksPath.$([guid]::NewGuid().ToString('N')).bak"
+    Copy-Item -LiteralPath $HooksPath -Destination $BackupPath
 } else {
-    $Document = [pscustomobject][ordered]@{
-        description = "Local Codex lifecycle hooks"
-        hooks = [pscustomobject]@{}
-    }
+    $Document = [pscustomobject]@{ description = "Local Prompt History hooks"; hooks = [pscustomobject]@{} }
 }
-
 if (-not $Document.hooks) {
-    $Document | Add-Member -NotePropertyName hooks -NotePropertyValue ([pscustomobject]@{})
+    $Document | Add-Member -NotePropertyName hooks -NotePropertyValue ([pscustomobject]@{}) -Force
 }
-@("SessionStart", "UserPromptSubmit", "PostToolUse", "SessionEnd") | ForEach-Object {
-    $Document.hooks | Add-Member -NotePropertyName $_ -NotePropertyValue @($Group) -Force
+foreach ($EventName in @("SessionStart", "UserPromptSubmit", "PostToolUse", "SessionEnd")) {
+    $Groups = @()
+    foreach ($ExistingGroup in @($Document.hooks.$EventName)) {
+        if ($null -eq $ExistingGroup) { continue }
+        $Remaining = @($ExistingGroup.hooks | Where-Object {
+            -not ([string]$_.command).Contains($HookScript) -and
+            -not ([string]$_.commandWindows).Contains($WindowsLauncher)
+        })
+        if ($Remaining.Count) {
+            $ExistingGroup.hooks = $Remaining
+            $Groups += $ExistingGroup
+        }
+    }
+    $Groups += [pscustomobject]@{ hooks = @($Handler) }
+    $Document.hooks | Add-Member -NotePropertyName $EventName -NotePropertyValue $Groups -Force
 }
-$Json = $Document | ConvertTo-Json -Depth 12
+$Json = $Document | ConvertTo-Json -Depth 32
+New-Item -ItemType Directory -Force -Path $CodexHomePath | Out-Null
 $Utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($HooksPath, $Json, $Utf8WithoutBom)
-
-Write-Output "Installed standalone Prompt History lifecycle hooks: $HooksPath"
-Write-Output "Events: SessionStart, UserPromptSubmit, PostToolUse, SessionEnd"
-Write-Output "Previous configuration backup: $HooksPath.bak"
-Write-Output "Open /hooks in Codex and trust the new hook definition before testing."
+Write-Output "Installed Prompt History hooks: $HooksPath"
+if ($BackupPath) { Write-Output "Previous configuration backup: $BackupPath" }
+Write-Output "Existing unrelated handlers are preserved. Restart the client and review its hook configuration."

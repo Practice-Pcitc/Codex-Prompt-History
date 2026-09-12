@@ -1,17 +1,34 @@
+# Secrets and local settings
+.env
+.env.*
+!.env.example
+# Python
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
 .venv/
+*.egg-info/
+.coverage
+htmlcov/
+# Frontend
 node_modules/
-viewer/dist/
-viewer/.vite/
-viewer/.npm-cache-standalone/
-data/*.db
-data/*.db-*
+dist/
+.vite/
+coverage/
+.npm-cache-standalone/
+# Private runtime data
+data/
 logs/
-.env
+*.log
+# Editors and operating systems
 .idea/
 .vscode/
 Thumbs.db
 .DS_Store
+
+# Browser test outputs
+test-results/
+playwright-report/
+.venv-backup-*/

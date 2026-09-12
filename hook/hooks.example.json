@@ -6,8 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python /absolute/path/to/codex-hooks/prompt_hook.py",
-            "commandWindows": "cmd.exe /d /s /c C:\\absolute\\path\\to\\codex-hooks\\run_prompt_hook.cmd",
+            "command": "python /absolute/path/to/Codex-Prompt-History/hook/prompt_hook.py",
+            "commandWindows": "cmd.exe /d /s /c C:\\absolute\\path\\to\\Codex-Prompt-History/hook\\run_prompt_hook.cmd",
             "timeout": 3
           }
         ]
@@ -18,8 +18,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python /absolute/path/to/codex-hooks/prompt_hook.py",
-            "commandWindows": "cmd.exe /d /s /c C:\\absolute\\path\\to\\codex-hooks\\run_prompt_hook.cmd",
+            "command": "python /absolute/path/to/Codex-Prompt-History/hook/prompt_hook.py",
+            "commandWindows": "cmd.exe /d /s /c C:\\absolute\\path\\to\\Codex-Prompt-History/hook\\run_prompt_hook.cmd",
             "timeout": 3
           }
         ]
@@ -30,8 +30,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python /absolute/path/to/codex-hooks/prompt_hook.py",
-            "commandWindows": "cmd.exe /d /s /c C:\\absolute\\path\\to\\codex-hooks\\run_prompt_hook.cmd",
+            "command": "python /absolute/path/to/Codex-Prompt-History/hook/prompt_hook.py",
+            "commandWindows": "cmd.exe /d /s /c C:\\absolute\\path\\to\\Codex-Prompt-History/hook\\run_prompt_hook.cmd",
             "timeout": 3
           }
         ]
@@ -42,8 +42,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python /absolute/path/to/codex-hooks/prompt_hook.py",
-            "commandWindows": "cmd.exe /d /s /c C:\\absolute\\path\\to\\codex-hooks\\run_prompt_hook.cmd",
+            "command": "python /absolute/path/to/Codex-Prompt-History/hook/prompt_hook.py",
+            "commandWindows": "cmd.exe /d /s /c C:\\absolute\\path\\to\\Codex-Prompt-History/hook\\run_prompt_hook.cmd",
             "timeout": 3
           }
         ]

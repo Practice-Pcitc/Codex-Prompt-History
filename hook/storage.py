@@ -1,87 +1,20 @@
 from __future__ import annotations
 
+import json
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
+from history_core.database import initialize_schema
 from models import PromptRecord, SessionRecord, ToolEventRecord
-
-SCHEMA_SQL = """
-CREATE TABLE IF NOT EXISTS prompt_records (
-    id TEXT PRIMARY KEY,
-    session_id TEXT,
-    turn_id TEXT,
-    project_id TEXT,
-    project_name TEXT NOT NULL,
-    working_directory TEXT NOT NULL,
-    repository_path TEXT,
-    prompt TEXT NOT NULL,
-    prompt_length INTEGER NOT NULL,
-    source TEXT NOT NULL,
-    model TEXT,
-    permission_mode TEXT,
-    git_branch TEXT,
-    git_commit TEXT,
-    endpoint_ids TEXT NOT NULL DEFAULT '[]',
-    node_ids TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS ix_prompt_records_created_at
-    ON prompt_records(created_at DESC);
-CREATE INDEX IF NOT EXISTS ix_prompt_records_project_name
-    ON prompt_records(project_name);
-CREATE INDEX IF NOT EXISTS ix_prompt_records_project_id
-    ON prompt_records(project_id);
-CREATE INDEX IF NOT EXISTS ix_prompt_records_session_id
-    ON prompt_records(session_id);
-CREATE TABLE IF NOT EXISTS codex_sessions (
-    session_id TEXT PRIMARY KEY,
-    project_id TEXT,
-    project_name TEXT NOT NULL,
-    working_directory TEXT NOT NULL,
-    repository_path TEXT,
-    model TEXT,
-    permission_mode TEXT,
-    git_branch TEXT,
-    git_commit TEXT,
-    started_at TEXT NOT NULL,
-    ended_at TEXT,
-    end_reason TEXT,
-    status TEXT NOT NULL DEFAULT 'active',
-    prompt_count INTEGER NOT NULL DEFAULT 0,
-    tool_call_count INTEGER NOT NULL DEFAULT 0,
-    updated_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS ix_codex_sessions_started_at
-    ON codex_sessions(started_at DESC);
-CREATE INDEX IF NOT EXISTS ix_codex_sessions_project_id
-    ON codex_sessions(project_id);
-CREATE TABLE IF NOT EXISTS codex_tool_events (
-    id TEXT PRIMARY KEY,
-    session_id TEXT,
-    turn_id TEXT,
-    project_id TEXT,
-    project_name TEXT NOT NULL,
-    working_directory TEXT NOT NULL,
-    tool_name TEXT NOT NULL,
-    tool_use_id TEXT,
-    status TEXT NOT NULL,
-    duration_ms REAL,
-    error_type TEXT,
-    created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS ix_codex_tool_events_created_at
-    ON codex_tool_events(created_at DESC);
-CREATE INDEX IF NOT EXISTS ix_codex_tool_events_session_id
-    ON codex_tool_events(session_id);
-CREATE INDEX IF NOT EXISTS ix_codex_tool_events_tool_name
-    ON codex_tool_events(tool_name);
-"""
 
 
 class PromptStorage:
     def __init__(self, database_path: Path, *, timeout_seconds: float = 0.2) -> None:
         self.database_path = database_path
         self.timeout_seconds = timeout_seconds
+        self._connection: sqlite3.Connection | None = None
 
     def _connect(self) -> sqlite3.Connection:
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
@@ -89,17 +22,35 @@ class PromptStorage:
             self.database_path,
             timeout=self.timeout_seconds,
         )
-        connection.execute("PRAGMA busy_timeout=200")
-        connection.execute("PRAGMA journal_mode=WAL")
+        connection.execute(f"PRAGMA busy_timeout={int(self.timeout_seconds * 1000)}")
         return connection
 
-    def initialize(self) -> None:
-        with self._connect() as connection:
-            connection.executescript(SCHEMA_SQL)
+    @contextmanager
+    def transaction(self) -> Iterator[None]:
+        if self._connection is not None:
+            raise RuntimeError("Nested Hook transactions are not supported")
+        connection = self._connect()
+        try:
+            initialize_schema(connection)
+            connection.execute("BEGIN IMMEDIATE")
+            self._connection = connection
+            yield
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            self._connection = None
+            connection.close()
+
+    @contextmanager
+    def connection(self) -> Iterator[sqlite3.Connection]:
+        if self._connection is None:
+            raise RuntimeError("Hook writes require an explicit transaction")
+        yield self._connection
 
     def insert(self, record: PromptRecord) -> None:
-        with self._connect() as connection:
-            connection.executescript(SCHEMA_SQL)
+        with self.connection() as connection:
             connection.execute(
                 """
                 INSERT INTO prompt_records (
@@ -130,9 +81,14 @@ class PromptStorage:
                 ),
             )
 
+    def uses_local_collector(self) -> bool:
+        """One database uses one capture source, so pause and project scope stay reliable."""
+        with self.connection() as connection:
+            row = connection.execute("SELECT value FROM collector_settings WHERE id=1").fetchone()
+            return bool(row and json.loads(row[0]).get("source_mode") == "local_sessions")
+
     def start_session(self, record: SessionRecord) -> None:
-        with self._connect() as connection:
-            connection.executescript(SCHEMA_SQL)
+        with self.connection() as connection:
             connection.execute(
                 """
                 INSERT INTO codex_sessions (
@@ -185,8 +141,7 @@ class PromptStorage:
             return
         if counter not in {"prompt_count", "tool_call_count"}:
             raise ValueError("unsupported session counter")
-        with self._connect() as connection:
-            connection.executescript(SCHEMA_SQL)
+        with self.connection() as connection:
             connection.execute(
                 f"""
                 UPDATE codex_sessions
@@ -197,8 +152,7 @@ class PromptStorage:
             )
 
     def insert_tool_event(self, record: ToolEventRecord) -> None:
-        with self._connect() as connection:
-            connection.executescript(SCHEMA_SQL)
+        with self.connection() as connection:
             connection.execute(
                 """
                 INSERT INTO codex_tool_events (
@@ -230,8 +184,7 @@ class PromptStorage:
         ended_at: str,
         reason: str | None,
     ) -> None:
-        with self._connect() as connection:
-            connection.executescript(SCHEMA_SQL)
+        with self.connection() as connection:
             connection.execute(
                 """
                 UPDATE codex_sessions

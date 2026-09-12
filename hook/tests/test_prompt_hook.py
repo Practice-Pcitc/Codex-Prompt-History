@@ -162,7 +162,5 @@ def test_failed_tool_hook_records_only_error_type(tmp_path: Path) -> None:
     )
 
     with sqlite3.connect(config.database_path) as connection:
-        row = connection.execute(
-            "SELECT status, error_type FROM codex_tool_events"
-        ).fetchone()
+        row = connection.execute("SELECT status, error_type FROM codex_tool_events").fetchone()
     assert row == ("failed", "ToolError")

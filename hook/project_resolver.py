@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 from models import GitMetadata, ProjectMatch
@@ -29,7 +30,7 @@ def resolve_project(
 
     if project_database_path.is_file():
         try:
-            with sqlite3.connect(project_database_path, timeout=0.1) as connection:
+            with closing(sqlite3.connect(project_database_path, timeout=0.1)) as connection:
                 rows = connection.execute("SELECT id, name, root_path FROM projects").fetchall()
             for project_id, project_name, root_path in rows:
                 normalized_root = _normalized(str(root_path))
